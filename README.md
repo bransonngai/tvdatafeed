@@ -1,3 +1,7 @@
+# Fixed the selenium problem 
+I kept selenium coz its still better than the new version (v2.0)
+
+
 # **TvDatafeed**
 
 A simple TradingView historical Data Downloader. Tvdatafeed allows downloading upto 5000 bars on any of the supported timeframe.

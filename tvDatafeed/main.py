@@ -166,17 +166,12 @@ class TvDatafeed:
             try:
                 logger.debug("click sign in")
                 driver.find_element_by_class_name("tv-header__user-menu-button").click()
-                driver.find_element_by_xpath(
-                    '//*[@id="overlap-manager-root"]/div/span/div[1]/div/div/div[1]/div[2]/div'
-                ).click()
 
-                time.sleep(5)
-                logger.debug("click email")
-                embutton = driver.find_element_by_class_name(
-                    "tv-signin-dialog__toggle-email"
-                )
-                embutton.click()
-                time.sleep(5)
+                driver.find_element_by_xpath(
+                    '/html/body/div[6]/div/span/div[1]/div/div/div/button[1]/span/span/div/div/span[1]'
+                ).click()
+                
+                time.sleep(2)
 
                 logger.debug("entering credentials")
                 username_input = driver.find_element_by_name("username")
