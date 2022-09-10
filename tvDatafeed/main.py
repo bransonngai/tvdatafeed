@@ -9,6 +9,7 @@ import re
 import shutil
 import string
 import time
+import platform
 import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -17,6 +18,7 @@ from websocket import create_connection
 import sys
 
 logger = logging.getLogger(__name__)
+_platform = platform.system()
 
 
 class Interval(enum.Enum):
@@ -76,10 +78,10 @@ class TvDatafeed:
             os.mkdir(self.path)
             if self.chromedriver_path is None:
                 if (
-                    input(
-                        "\n\ndo you want to install chromedriver automatically?? y/n\t"
-                    ).lower()
-                    == "y"
+                        input(
+                            "\n\ndo you want to install chromedriver automatically?? y/n\t"
+                        ).lower()
+                        == "y"
                 ):
                     self.__install_chromedriver()
 
@@ -127,11 +129,11 @@ class TvDatafeed:
         logger.info("cache cleared")
 
     def __init__(
-        self,
-        username=None,
-        password=None,
-        chromedriver_path=None,
-        auto_login=True,
+            self,
+            username=None,
+            password=None,
+            chromedriver_path=None,
+            auto_login=True,
     ) -> None:
 
         self.ws_debug = False
@@ -166,12 +168,20 @@ class TvDatafeed:
             try:
                 logger.debug("click sign in")
                 driver.find_element_by_class_name("tv-header__user-menu-button").click()
-
+                # Click the right top login
                 driver.find_element_by_xpath(
                     '/html/body/div[6]/div/span/div[1]/div/div/div/button[1]/span/span/div/div/span[1]'
                 ).click()
-                
+
                 time.sleep(2)
+                # it promts the different login method
+
+                if _platform == 'Linux':
+                    # click the email login method
+                    driver.find_element_by_xpath(
+                        '/html/body/div[6]/div/div[2]/div/div/div/div/div/div/div[1]/div[4]/div/span'
+                    ).click()
+                    time.sleep(2)
 
                 logger.debug("entering credentials")
                 username_input = driver.find_element_by_name("username")
@@ -195,9 +205,9 @@ class TvDatafeed:
         token = self.__load_token()
 
         if (
-            token is None
-            and (username is None or password is None)
-            and self.__automatic_login
+                token is None
+                and (username is None or password is None)
+                and self.__automatic_login
         ):
             pass
 
@@ -285,9 +295,9 @@ class TvDatafeed:
 
                 if "Network.webSocketFrameSent" in log["method"]:
                     if (
-                        "set_auth_token" in log["params"]["response"]["payloadData"]
-                        and "unauthorized_user_token"
-                        not in log["params"]["response"]["payloadData"]
+                            "set_auth_token" in log["params"]["response"]["payloadData"]
+                            and "unauthorized_user_token"
+                            not in log["params"]["response"]["payloadData"]
                     ):
                         yield log
 
@@ -397,13 +407,13 @@ class TvDatafeed:
         return symbol
 
     def get_hist(
-        self,
-        symbol: str,
-        exchange: str = "NSE",
-        interval: Interval = Interval.in_daily,
-        n_bars: int = 10,
-        fut_contract: int = None,
-        extended_session: bool = False,
+            self,
+            symbol: str,
+            exchange: str = "NSE",
+            interval: Interval = Interval.in_daily,
+            n_bars: int = 10,
+            fut_contract: int = None,
+            extended_session: bool = False,
     ) -> pd.DataFrame:
         """get historical data
 
