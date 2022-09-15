@@ -165,10 +165,35 @@ class TvDatafeed:
             input()
 
         else:
+            def wait_for_class_to_be_available(browser, class_name, total_wait=100):
+                try:
+                    # Give only one class name, if you want to check multiple classes then 'and' will be use in XPATH
+                    # e.g //*[contains(@class, "class_name") and contains(@class, "second_class_name")]
+                    elem = browser.find_element_by_class_name(class_name)
+                except:
+                    total_wait -= 1
+                    time.sleep(1)
+                    if total_wait > 1: wait_for_class_to_be_available(browser, class_name, total_wait)
+
+            def wait_for_xpath_to_be_available(browser, xpath, total_wait=100):
+                try:
+                    # Give only one class name, if you want to check multiple classes then 'and' will be use in XPATH
+                    # e.g //*[contains(@class, "class_name") and contains(@class, "second_class_name")]
+                    elem = browser.find_element_by_xpath(xpath)
+                except:
+                    total_wait -= 1
+                    time.sleep(1)
+                    if total_wait > 1: wait_for_xpath_to_be_available(browser, xpath, total_wait)
+
             try:
                 logger.debug("click sign in")
+
+                # explicit waits
+                wait_for_class_to_be_available(driver, "tv-header__user-menu-button", 20)
                 driver.find_element_by_class_name("tv-header__user-menu-button").click()
+
                 # Click the right top login
+                wait_for_xpath_to_be_available(driver, '/html/body/div[6]/div/span/div[1]/div/div/div/button[1]/span/span/div/div/span[1]', 20)
                 driver.find_element_by_xpath(
                     '/html/body/div[6]/div/span/div[1]/div/div/div/button[1]/span/span/div/div/span[1]'
                 ).click()
@@ -178,6 +203,9 @@ class TvDatafeed:
 
                 if _platform == 'Linux':
                     # click the email login method
+                    wait_for_xpath_to_be_available(driver,
+                                                   '/html/body/div[6]/div/div[2]/div/div/div/div/div/div/div[1]/div[4]/div/span',
+                                                   20)
                     driver.find_element_by_xpath(
                         '/html/body/div[6]/div/div[2]/div/div/div/div/div/div/div[1]/div[4]/div/span'
                     ).click()
@@ -240,7 +268,7 @@ class TvDatafeed:
         options = Options()
 
         if self.__automatic_login:
-            options.add_argument("--headless")
+            # options.add_argument("--headless")
             logger.debug("chromedriver in headless mode")
 
         # options.add_argument("--start-maximized")
