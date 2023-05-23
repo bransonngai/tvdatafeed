@@ -55,9 +55,19 @@ class TvDatafeed:
         logger.debug("auth saved")
 
     def __load_token(self):
+        """
+        if token is too old, should delete the token first
+        """
         tokenfile = os.path.join(self.path, "token")
         token = None
         if os.path.exists(tokenfile):
+
+            # if token is too old, return None
+            ti_m = os.path.getmtime(tokenfile)
+            # if over 2 days, refresh the token
+            if time.time() - ti_m >= 180000:
+                return None
+
             with open(tokenfile, "rb") as f:
                 contents = pickle.load(f)
 
@@ -134,10 +144,12 @@ class TvDatafeed:
             password=None,
             chromedriver_path=None,
             auto_login=True,
+            headless=True,
     ) -> None:
 
         self.ws_debug = False
         self.__automatic_login = auto_login
+        self.__headless = headless
         self.chromedriver_path = chromedriver_path
         self.profile_dir = os.path.join(self.path, "chrome")
         self.token_date = datetime.date.today() - datetime.timedelta(days=1)
@@ -165,51 +177,70 @@ class TvDatafeed:
             input()
 
         else:
-            def wait_for_class_to_be_available(browser, class_name, total_wait=100):
+            def wait_for_class_to_be_available_and_click(browser, class_name, total_wait=30):
                 try:
                     # Give only one class name, if you want to check multiple classes then 'and' will be use in XPATH
                     # e.g //*[contains(@class, "class_name") and contains(@class, "second_class_name")]
                     elem = browser.find_element_by_class_name(class_name)
+                    driver.find_element_by_class_name(class_name).click()
                 except:
                     total_wait -= 1
                     time.sleep(1)
-                    if total_wait > 1: wait_for_class_to_be_available(browser, class_name, total_wait)
+                    if total_wait > 1: wait_for_class_to_be_available_and_click(browser, class_name, total_wait)
 
-            def wait_for_xpath_to_be_available(browser, xpath, total_wait=100):
+            def wait_for_xpath_to_be_available_and_click(browser, xpath, total_wait=30):
                 try:
                     # Give only one class name, if you want to check multiple classes then 'and' will be use in XPATH
                     # e.g //*[contains(@class, "class_name") and contains(@class, "second_class_name")]
                     elem = browser.find_element_by_xpath(xpath)
+                    driver.find_element_by_xpath(xpath).click()
                 except:
                     total_wait -= 1
                     time.sleep(1)
-                    if total_wait > 1: wait_for_xpath_to_be_available(browser, xpath, total_wait)
+                    if total_wait > 1: wait_for_xpath_to_be_available_and_click(browser, xpath, total_wait)
 
             try:
                 logger.debug("click sign in")
 
                 # explicit waits
-                wait_for_class_to_be_available(driver, "tv-header__user-menu-button", 20)
-                driver.find_element_by_class_name("tv-header__user-menu-button").click()
+                wait_for_class_to_be_available_and_click(driver, "tv-header__user-menu-button", 20)
 
                 # Click the right top login
-                wait_for_xpath_to_be_available(driver, '/html/body/div[6]/div/span/div[1]/div/div/div/button[1]/span/span/div/div/span[1]', 20)
-                driver.find_element_by_xpath(
-                    '/html/body/div[6]/div/span/div[1]/div/div/div/button[1]/span/span/div/div/span[1]'
-                ).click()
+                wait_for_xpath_to_be_available_and_click(
+                    driver,
+                    # '/html/body/div[7]/div/div[2]/div/div/div/div/div/div/div[1]/div[4]/div/span',  # old
+                    '/html/body/div[8]/div/span/div[1]/div/div/div/button[1]',  # 20230120
+                    20
+                )
 
                 time.sleep(2)
                 # it promts the different login method
 
                 if _platform == 'Linux':
                     # click the email login method
-                    wait_for_xpath_to_be_available(driver,
+                    wait_for_xpath_to_be_available_and_click(driver,
                                                    '/html/body/div[6]/div/div[2]/div/div/div/div/div/div/div[1]/div[4]/div/span',
                                                    20)
                     driver.find_element_by_xpath(
                         '/html/body/div[6]/div/div[2]/div/div/div/div/div/div/div[1]/div[4]/div/span'
                     ).click()
                     time.sleep(2)
+
+                elif _platform == 'Windows':
+                    # wait for the login dialog appears (it always change div no. not good to use xpath)
+                    # wait_for_xpath_to_be_available_and_click(
+                    #     driver,
+                    #     '/html/body/div[8]/div/div[2]/div/div/div/div/div/div/div[1]/div[4]/div/span'
+                    #     , 2
+                    # )
+
+                    wait_for_class_to_be_available_and_click(
+                        driver,
+                        "i-clearfix",
+                        2
+                    )
+
+                    time.sleep(1)
 
                 logger.debug("entering credentials")
                 username_input = driver.find_element_by_name("username")
@@ -268,8 +299,9 @@ class TvDatafeed:
         options = Options()
 
         if self.__automatic_login:
-            options.add_argument("--headless")
-            logger.debug("chromedriver in headless mode")
+            if self.__headless:
+                options.add_argument("--headless")
+                logger.debug("chromedriver in headless mode")
 
         # options.add_argument("--start-maximized")
         options.add_argument("--disable-gpu")
